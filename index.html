@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduTrack - Dashboard Prestasi Pelajar</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .hide { display: none !important; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .nav-item.active { background-color: #f1f5f9; color: #4f46e5; border-right: 4px solid #4f46e5; font-weight: 600; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Table Styles */
+        .table-container { overflow-x: auto; border-radius: 0.5rem; border: 1px solid #e2e8f0; }
+        th { background-color: #f8fafc; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; color: #475569; }
+        td { font-size: 0.875rem; color: #334155; }
+
+        /* Print Styles */
+        @media print {
+            body { background-color: white; }
+            #app-layout, #login-view { display: none !important; }
+            #modal-slip { 
+                display: block !important; 
+                position: absolute; 
+                top: 0; left: 0; 
+                width: 100%; height: auto; 
+                background: white; 
+            }
+            .print-hide { display: none !important; }
+            .print-shadow-none { box-shadow: none !important; border: none !important; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 h-screen overflow-hidden flex flex-col antialiased">
+
+    <!-- LOGIN VIEW -->
+    <div id="login-view" class="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-indigo-900 to-slate-800">
+        
+        <!-- Loading Data Indicator -->
+        <div id="login-data-loading" class="text-white mb-4 font-medium flex items-center gap-2">
+            <i class="fa-solid fa-circle-notch fa-spin text-xl"></i> Memuat turun pangkalan data...
+        </div>
+
+        <!-- 1. STUDENT LOGIN BOX (DEFAULT) -->
+        <div id="student-login-box" class="glass-panel p-10 rounded-2xl shadow-2xl w-full max-w-md mx-4 hide">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <i class="fa-solid fa-user-graduate text-3xl text-white"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-800">Semakan Pelajar</h1>
+                <p class="text-sm text-slate-500 mt-2">Masukkan maklumat pelajar untuk semakan</p>
+            </div>
+            
+            <form id="student-login-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">ID Pelajar / No. Kad Pengenalan</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-id-card text-slate-400"></i>
+                        </div>
+                        <input type="text" id="student-login-id" class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all" placeholder="Cth: P001 atau 060101-01-1234" required>
+                    </div>
+                </div>
+                <div id="student-login-error" class="text-red-500 text-sm hide font-medium text-center bg-red-50 py-2 rounded">Rekod pelajar tidak dijumpai!</div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg shadow-md transition-colors flex justify-center items-center gap-2">
+                    <span>Semak Keputusan</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+            
+            <div class="mt-8 pt-6 border-t border-slate-200 text-center">
+                <p class="text-sm text-slate-500 mb-3">Akses untuk Pentadbir Sistem</p>
+                <button onclick="toggleLogin('admin')" class="text-indigo-600 hover:text-indigo-800 font-medium text-sm flex items-center justify-center gap-2 w-full">
+                    <i class="fa-solid fa-shield-halved"></i> Log Masuk Admin
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. ADMIN LOGIN BOX (HIDDEN) -->
+        <div id="admin-login-box" class="glass-panel p-10 rounded-2xl shadow-2xl w-full max-w-md mx-4 hide">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <i class="fa-solid fa-graduation-cap text-3xl text-white"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-800">EduTrack Admin</h1>
+                <p class="text-sm text-slate-500 mt-2">Log masuk pentadbir sistem</p>
+            </div>
+            
+            <form id="login-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">ID Pengguna</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-user text-slate-400"></i>
+                        </div>
+                        <input type="text" id="login-id" class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="Masukkan ID" value="admin">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Kata Laluan</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-lock text-slate-400"></i>
+                        </div>
+                        <input type="password" id="login-pass" class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="Masukkan Kata Laluan" value="admin123">
+                    </div>
+                </div>
+                <div id="login-error" class="text-red-500 text-sm hide font-medium text-center">ID atau Kata Laluan tidak sah!</div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow-md transition-colors flex justify-center items-center gap-2">
+                    <span>Log Masuk Admin</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+            
+            <div class="mt-8 pt-6 border-t border-slate-200 text-center">
+                <button onclick="toggleLogin('student')" class="text-emerald-600 hover:text-emerald-800 font-medium text-sm flex items-center justify-center gap-2 w-full">
+                    <i class="fa-solid fa-arrow-left"></i> Kembali ke Semakan Pelajar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP LAYOUT -->
+    <div id="app-layout" class="flex h-screen w-full bg-slate-50 hide">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 z-20" id="sidebar">
+            <div class="h-16 flex items-center px-6 border-b border-slate-200">
+                <i class="fa-solid fa-graduation-cap text-2xl text-indigo-600 mr-3"></i>
+                <span class="text-xl font-bold text-slate-800 tracking-tight">EduTrack</span>
+            </div>
+            
+            <nav class="flex-1 py-4 flex flex-col gap-1 px-3">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active flex items-center w-full px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors text-left">
+                    <i class="fa-solid fa-chart-pie w-6 text-center"></i>
+                    <span class="ml-2">Dashboard</span>
+                </button>
+                <button onclick="switchTab('pelajar')" id="nav-pelajar" class="nav-item flex items-center w-full px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors text-left">
+                    <i class="fa-solid fa-users w-6 text-center"></i>
+                    <span class="ml-2">Data Pelajar</span>
+                </button>
+                <button onclick="switchTab('pentadbiran')" id="nav-pentadbiran" class="nav-item flex items-center w-full px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors text-left">
+                    <i class="fa-solid fa-clipboard-list w-6 text-center"></i>
+                    <span class="ml-2">Pentadbiran</span>
+                </button>
+                <button onclick="switchTab('tetapan')" id="nav-tetapan" class="nav-item flex items-center w-full px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors text-left">
+                    <i class="fa-solid fa-gear w-6 text-center"></i>
+                    <span class="ml-2">Tetapan Sistem</span>
+                </button>
+            </nav>
+            
+            <div class="p-4 border-t border-slate-200">
+                <button onclick="logout()" class="flex items-center w-full px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors font-medium">
+                    <i class="fa-solid fa-sign-out-alt w-6 text-center"></i>
+                    <span class="ml-2">Log Keluar</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col overflow-hidden relative">
+            
+            <!-- Topbar -->
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-10 shadow-sm">
+                <div class="flex items-center">
+                    <button id="mobile-menu-btn" class="lg:hidden text-slate-500 hover:text-indigo-600 mr-4">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <h2 id="page-title" class="text-lg font-bold text-slate-800">Ringkasan Prestasi</h2>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <div id="loading-indicator" class="hide flex items-center text-indigo-600 text-sm font-medium">
+                        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Menyegerak data...
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                            A
+                        </div>
+                        <span class="text-sm font-semibold text-slate-700 hidden sm:block">Admin Sistem</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Scrollable Content -->
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-slate-50 w-full">
+                
+                <!-- DASHBOARD VIEW -->
+                <div id="view-dashboard" class="view-section">
+                    
+                    <!-- Filters -->
+                    <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                        <h3 class="font-semibold text-slate-700">Penapis Analisis</h3>
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-slate-500">Subjek:</label>
+                            <select id="filter-subjek" onchange="updateDashboard()" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-48 p-2 outline-none">
+                                <option value="ALL">Semua Subjek</option>
+                                <!-- Populate via JS -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center">
+                            <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-4">
+                                <i class="fa-solid fa-users text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-500">Jumlah Pelajar</p>
+                                <h4 class="text-2xl font-bold text-slate-800" id="stat-pelajar">0</h4>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center">
+                            <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-4">
+                                <i class="fa-solid fa-chart-line text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-500">Purata Keseluruhan</p>
+                                <h4 class="text-2xl font-bold text-slate-800" id="stat-purata">0%</h4>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center">
+                            <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 mr-4">
+                                <i class="fa-solid fa-book text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-500">Subjek Aktif</p>
+                                <h4 class="text-2xl font-bold text-slate-800" id="stat-subjek">0</h4>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center">
+                            <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 mr-4">
+                                <i class="fa-solid fa-award text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-500">Pelajar Cemerlang (A)</p>
+                                <h4 class="text-2xl font-bold text-slate-800" id="stat-cemerlang">0</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Bar Chart -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 lg:col-span-2">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4">Purata Markah Mengikut Subjek</h3>
+                            <div class="relative h-[300px] w-full">
+                                <canvas id="barChart"></canvas>
+                            </div>
+                        </div>
+                        <!-- Doughnut Chart -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4">Taburan Gred Keseluruhan</h3>
+                            <div class="relative h-[300px] w-full flex justify-center">
+                                <canvas id="pieChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Top Students Table -->
+                    <div class="mt-6 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="p-5 border-b border-slate-100">
+                            <h3 class="text-lg font-bold text-slate-800">Pencapaian Tertinggi Terbaru</h3>
+                        </div>
+                        <div class="table-container">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr>
+                                        <th class="py-3 px-4 font-semibold">Nama Pelajar</th>
+                                        <th class="py-3 px-4 font-semibold">Kelas</th>
+                                        <th class="py-3 px-4 font-semibold">Peperiksaan</th>
+                                        <th class="py-3 px-4 font-semibold">Subjek</th>
+                                        <th class="py-3 px-4 font-semibold text-right">Markah</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="top-students-table" class="divide-y divide-slate-100">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PELAJAR VIEW -->
+                <div id="view-pelajar" class="view-section hide">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[calc(100vh-140px)]">
+                        
+                        <!-- Search & Filter Bar -->
+                        <div class="p-5 border-b border-slate-100 bg-slate-50 flex flex-col gap-4">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800">Direktori Pelajar & Keputusan</h3>
+                                    <p class="text-sm text-slate-500">Cari dan tapis rekod untuk paparan slip</p>
+                                </div>
+                                <div class="w-full md:w-1/3 relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fa-solid fa-search text-slate-400"></i>
+                                    </div>
+                                    <input type="text" id="search-pelajar" onkeyup="renderPelajarTable()" class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="Carian nama atau IC...">
+                                </div>
+                            </div>
+                            
+                            <!-- New Filters Grid -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 border-t border-slate-200 mt-1">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Tingkatan / Kelas</label>
+                                    <select id="filter-kelas-dir" onchange="renderPelajarTable()" class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5 outline-none cursor-pointer">
+                                        <option value="ALL">Semua Kelas</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider text-indigo-600 font-bold"><i class="fa-solid fa-filter mr-1"></i> Peperiksaan (Untuk Slip)</label>
+                                    <select id="filter-exam-dir" onchange="renderPelajarTable()" class="w-full bg-indigo-50 border border-indigo-200 text-indigo-800 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5 outline-none cursor-pointer font-medium">
+                                        <option value="ALL">Semua Peperiksaan</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Subjek yang diambil</label>
+                                    <select id="filter-subjek-dir" onchange="renderPelajarTable()" class="w-full bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5 outline-none cursor-pointer">
+                                        <option value="ALL">Semua Subjek</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="flex-1 overflow-auto">
+                            <table class="w-full text-left border-collapse min-w-max">
+                                <thead class="sticky top-0 bg-slate-100 shadow-sm z-10">
+                                    <tr>
+                                        <th class="py-3 px-5 font-semibold">ID</th>
+                                        <th class="py-3 px-5 font-semibold">Nama Penuh</th>
+                                        <th class="py-3 px-5 font-semibold">No IC</th>
+                                        <th class="py-3 px-5 font-semibold">Kelas</th>
+                                        <th class="py-3 px-5 font-semibold text-center">Tindakan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-pelajar-body" class="divide-y divide-slate-100">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PENTADBIRAN VIEW -->
+                <div id="view-pentadbiran" class="view-section hide">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        <!-- Form Daftar Pelajar -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                            <h3 class="text-lg font-bold text-slate-800 border-b pb-3 mb-5">Pendaftaran Pelajar Baru</h3>
+                            <form id="form-pelajar" onsubmit="handleFormSubmit(event, 'pelajar')" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">ID Pelajar</label>
+                                    <input type="text" id="add-id-pelajar" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Cth: P1001">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Nama Penuh</label>
+                                    <input type="text" id="add-nama" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Cth: Ali bin Abu">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Nombor IC</label>
+                                    <input type="text" id="add-ic" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Cth: 080101-10-1234">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Kelas</label>
+                                    <input type="text" id="add-kelas" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Cth: 5 Sains">
+                                </div>
+                                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg transition-colors mt-2">Daftar Pelajar</button>
+                            </form>
+                        </div>
+
+                        <!-- Form Daftar Subjek -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                            <h3 class="text-lg font-bold text-slate-800 border-b pb-3 mb-5">Pendaftaran Subjek Baru</h3>
+                            <form id="form-subjek" onsubmit="handleFormSubmit(event, 'subjek')" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">ID Subjek</label>
+                                    <input type="text" id="add-id-subjek" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Cth: S101">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Nama Mata Pelajaran</label>
+                                    <input type="text" id="add-nama-subjek" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Cth: Matematik Tambahan">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Warna Tema (Hex)</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="color" id="add-warna" value="#4f46e5" class="h-10 w-12 rounded cursor-pointer border border-slate-300 p-1">
+                                        <input type="text" id="add-warna-text" required value="#4f46e5" class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                                    <select id="add-status" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                                        <option value="YA">AKTIF (YA)</option>
+                                        <option value="TIDAK">TIDAK AKTIF</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg transition-colors mt-2">Daftar Subjek</button>
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- TETAPAN VIEW -->
+                <div id="view-tetapan" class="view-section hide">
+                    <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-slate-100">
+                        <div class="flex items-center mb-6 border-b pb-4">
+                            <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 mr-4">
+                                <i class="fa-solid fa-user-shield text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-800">Profil & Keselamatan</h3>
+                                <p class="text-sm text-slate-500">Kemaskini maklumat log masuk sistem</p>
+                            </div>
+                        </div>
+
+                        <form id="form-settings" onsubmit="updateSettings(event)" class="space-y-5">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">ID Pengguna Baru</label>
+                                <input type="text" id="set-id" required class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50" value="admin">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Kata Laluan Baru</label>
+                                <input type="password" id="set-pass" required class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50" value="admin123">
+                            </div>
+                            <div class="bg-blue-50 text-blue-800 p-4 rounded-lg text-sm flex gap-3 items-start mt-4">
+                                <i class="fa-solid fa-circle-info mt-0.5"></i>
+                                <p>Perhatian: Oleh kerana ini adalah sistem Front-end (Vanilla JS), maklumat log masuk ini hanya disimpan sementara secara *mock*. Ia akan kembali kepada asal jika halaman di-refresh.</p>
+                            </div>
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors shadow-sm">
+                                Simpan Perubahan
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- STUDENT PORTAL LAYOUT (BARU) -->
+    <div id="student-portal-layout" class="flex flex-col h-screen w-full bg-slate-100 hide">
+        <!-- Portal Header -->
+        <header class="bg-emerald-600 text-white shadow-md p-4 px-6 flex justify-between items-center z-10 print-hide">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-school text-2xl"></i>
+                <h1 class="font-bold text-lg hidden sm:block">Portal Semakan Ibu Bapa / Pelajar</h1>
+                <h1 class="font-bold text-lg sm:hidden">Portal Pelajar</h1>
+            </div>
+            <button onclick="logout()" class="bg-emerald-700 hover:bg-emerald-800 px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-2">
+                <i class="fa-solid fa-sign-out-alt"></i> Keluar
+            </button>
+        </header>
+
+        <!-- Portal Content -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            <div class="max-w-4xl mx-auto">
+                
+                <!-- Welcome & Filter Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 print-hide flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Selamat Datang, <span id="portal-welcome-name" class="text-emerald-600">Pelajar</span></h2>
+                        <p class="text-slate-500 text-sm mt-1">Sila pilih peperiksaan di bawah untuk melihat slip keputusan anda.</p>
+                    </div>
+                    <div class="w-full md:w-auto">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1"><i class="fa-solid fa-filter"></i> Pilih Peperiksaan</label>
+                        <select id="portal-exam-filter" onchange="renderStudentPortalData()" class="w-full md:w-64 bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 p-2.5 outline-none font-medium cursor-pointer">
+                            <option value="ALL">Kompilasi Keseluruhan</option>
+                            <!-- Diisi melalui JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Slip Container (Reusing Modal Styles but Embedded) -->
+                <div class="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden print-shadow-none print:border-none">
+                    
+                    <div class="p-6 border-b border-slate-200 flex justify-between items-start bg-emerald-50/50 print:bg-white print:border-b-2 print:border-slate-800">
+                        <div class="flex items-center gap-5">
+                            <div class="w-16 h-16 bg-emerald-600 rounded-xl flex items-center justify-center shadow-md print:shadow-none print:border print:border-slate-200">
+                                <i class="fa-solid fa-file-contract text-3xl text-white print:text-emerald-600 print:bg-transparent"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-slate-800 uppercase tracking-wider">Slip Keputusan</h2>
+                                <p class="text-slate-500 font-medium">Sistem Penilaian EduTrack</p>
+                            </div>
+                        </div>
+                        <button onclick="window.print()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors flex items-center gap-2 shadow-sm print-hide">
+                            <i class="fa-solid fa-print"></i> Cetak
+                        </button>
+                    </div>
+                    
+                    <div class="p-6 sm:p-8">
+                        <!-- Info Pelajar -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 bg-slate-50 p-5 rounded-xl border border-slate-100 print:bg-white print:border-none print:px-0">
+                            <div>
+                                <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">Nama Pelajar</p>
+                                <p id="portal-nama" class="font-bold text-slate-800 text-lg">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">Kelas</p>
+                                <p id="portal-kelas" class="font-bold text-slate-800 text-lg">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">No. Kad Pengenalan</p>
+                                <p id="portal-ic" class="font-medium text-slate-700">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">ID Pelajar</p>
+                                <p id="portal-id" class="font-medium text-slate-700">-</p>
+                            </div>
+                        </div>
+
+                        <!-- Label Peperiksaan -->
+                        <div class="mb-5 bg-emerald-50 text-emerald-800 px-4 py-2.5 rounded-lg border border-emerald-100 inline-block text-sm font-bold tracking-wide print:bg-transparent print:border-b-2 print:border-t-0 print:border-x-0 print:border-emerald-800 print:text-slate-900 print:px-0 print:rounded-none print:mb-4 print:pb-1">
+                            PEPERIKSAAN: <span id="portal-peperiksaan-label">KESELURUHAN</span>
+                        </div>
+
+                        <!-- Jadual Markah -->
+                        <div class="border border-slate-200 rounded-xl overflow-hidden">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-100 print:bg-slate-50">
+                                    <tr>
+                                        <th class="py-3 px-5 font-semibold text-slate-700 border-b border-slate-200">Mata Pelajaran</th>
+                                        <th class="py-3 px-5 font-semibold text-slate-700 border-b border-slate-200">Peperiksaan</th>
+                                        <th class="py-3 px-5 font-semibold text-slate-700 border-b border-slate-200 text-center">Markah</th>
+                                        <th class="py-3 px-5 font-semibold text-slate-700 border-b border-slate-200 text-center">Gred</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="portal-table-body" class="divide-y divide-slate-100">
+                                    <!-- Diisi melalui JS -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Rumusan -->
+                        <div class="mt-8 flex justify-end">
+                            <div class="w-full md:w-1/2 bg-emerald-50 rounded-xl p-5 border border-emerald-100 print:bg-white print:border-2 print:border-slate-200">
+                                <h4 class="font-bold text-emerald-900 print:text-slate-800 border-b border-emerald-200 print:border-slate-200 pb-2 mb-3 uppercase text-sm tracking-wider">Rumusan Prestasi</h4>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-emerald-700 print:text-slate-600 font-medium">Jumlah Subjek Diambil:</span>
+                                    <span id="portal-jumlah-subjek" class="font-bold text-emerald-900 print:text-slate-800">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-emerald-700 print:text-slate-600 font-medium">Purata Keseluruhan:</span>
+                                    <span id="portal-purata" class="font-bold text-emerald-900 print:text-slate-800 text-xl">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-12 text-center text-slate-500 text-sm">
+                            <p>Slip ini dijana secara automatik oleh Sistem EduTrack</p>
+                            <p>Tarikh Cetakan / Semakan: <span id="portal-tarikh"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL SLIP KEPUTUSAN PELAJAR -->
+    <div id="modal-slip" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hide print:bg-white print:static print:inset-auto">
+        <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden m-4 flex flex-col max-h-[90vh] print-shadow-none print:m-0 print:max-h-none print:w-full">
+            
+            <!-- Modal Header -->
+            <div class="p-6 border-b border-slate-200 flex justify-between items-start bg-indigo-50/50 print:bg-white print:border-b-2 print:border-slate-800">
+                <div class="flex items-center gap-5">
+                    <div class="w-16 h-16 bg-indigo-600 rounded-xl flex items-center justify-center shadow-md print:shadow-none print:border print:border-slate-200">
+                        <i class="fa-solid fa-file-contract text-3xl text-white print:text-indigo-600 print:bg-transparent"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 uppercase tracking-wider">Slip Keputusan</h2>
+                        <p class="text-slate-500 font-medium">Sistem Penilaian EduTrack</p>
+                    </div>
+                </div>
+                <button onclick="tutupSlip()" class="text-slate-400 hover:text-red-500 transition-colors print-hide">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Body (Scrollable) -->
+            <div class="p-6 overflow-y-auto flex-1">
+                
+                <!-- Info Pelajar -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 bg-slate-50 p-5 rounded-xl border border-slate-100 print:bg-white print:border-none print:px-0">
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">Nama Pelajar</p>
+                        <p id="slip-nama" class="font-bold text-slate-800 text-lg">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">Kelas</p>
+                        <p id="slip-kelas" class="font-bold text-slate-800 text-lg">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">No. Kad Pengenalan</p>
+                        <p id="slip-ic" class="font-medium text-slate-700">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">ID Pelajar</p>
+                        <p id="slip-id" class="font-medium text-slate-700">-</p>
+                    </div>
+                </div>
+
+                <!-- Label Peperiksaan (Baru) -->
+                <div class="mb-5 bg-indigo-50 text-indigo-800 px-4 py-2.5 rounded-lg border border-indigo-100 inline-block text-sm font-bold tracking-wide print:bg-transparent print:border-b-2 print:border-t-0 print:border-x-0 print:border-indigo-800 print:text-indigo-900 print:px-0 print:rounded-none print:mb-4 print:pb-1">
+                    PEPERIKSAAN: <span id="slip-peperiksaan-label">KESELURUHAN</span>
+                </div>
+
+                <!-- Jadual Markah -->
+                <div class="border border-slate-200 rounded-xl overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-100 print:bg-slate-50">
+                            <tr>
+                                <th class="py-3 px-5 font-semibold text-slate-700 border-b border-slate-200">Mata Pelajaran</th>
+                                <th class="py-3 px-5 font-semibold text-slate-700 border-b border-slate-200">Peperiksaan</th>
+                                <th class="py-3 px-5 font-semibold text-slate-700 border-b border-slate-200 text-center">Markah</th>
+                                <th class="py-3 px-5 font-semibold text-slate-700 border-b border-slate-200 text-center">Gred</th>
+                            </tr>
+                        </thead>
+                        <tbody id="slip-table-body" class="divide-y divide-slate-100">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Rumusan -->
+                <div class="mt-8 flex justify-end">
+                    <div class="w-full md:w-1/2 bg-indigo-50 rounded-xl p-5 border border-indigo-100 print:bg-white print:border-2 print:border-slate-200">
+                        <h4 class="font-bold text-indigo-900 print:text-slate-800 border-b border-indigo-200 print:border-slate-200 pb-2 mb-3 uppercase text-sm tracking-wider">Rumusan Prestasi</h4>
+                        <div class="flex justify-between mb-2">
+                            <span class="text-indigo-700 print:text-slate-600 font-medium">Jumlah Subjek Diambil:</span>
+                            <span id="slip-jumlah-subjek" class="font-bold text-indigo-900 print:text-slate-800">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-indigo-700 print:text-slate-600 font-medium">Purata Keseluruhan:</span>
+                            <span id="slip-purata" class="font-bold text-indigo-900 print:text-slate-800 text-xl">0%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-12 text-center hidden print:block text-slate-500 text-sm">
+                    <p>Slip ini dijana secara automatik oleh Sistem EduTrack</p>
+                    <p>Tarikh Cetakan: <span id="slip-tarikh"></span></p>
+                </div>
+            </div>
+
+            <!-- Modal Footer / Actions -->
+            <div class="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 print-hide">
+                <button onclick="tutupSlip()" class="px-5 py-2.5 rounded-lg text-slate-600 hover:bg-slate-200 font-medium transition-colors">Tutup</button>
+                <button onclick="cetakSlip()" class="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-print"></i> Cetak Slip Rasmi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MOCK DATA FALLBACK -->
+    <script>
+        // Data Fallback (Jika capaian Google Sheets Gagal)
+        const mockData = {
+            pelajar: [
+                { ID_PELAJAR: "P001", "NAMA PENUH": "AHMAD ALBAKRI BIN ABU", KELAS: "5 IBNU SINA", NO_IC: "060101-01-1235" },
+                { ID_PELAJAR: "P002", "NAMA PENUH": "SITI NURHALIZA BINTI ZAMRI", KELAS: "5 IBNU SINA", NO_IC: "060202-14-5678" },
+                { ID_PELAJAR: "P003", "NAMA PENUH": "CHONG WEI FENG", KELAS: "5 AL RAZI", NO_IC: "060303-07-9011" },
+                { ID_PELAJAR: "P004", "NAMA PENUH": "MUTHUSAMY A/L RAMASAMY", KELAS: "5 AL RAZI", NO_IC: "060404-08-2345" },
+                { ID_PELAJAR: "P005", "NAMA PENUH": "NUR FATIMAH BINTI HASAN", KELAS: "5 IBNU KHALDUN", NO_IC: "060505-10-6789" }
+            ],
+            subjek: [
+                { ID_SUBJEK: "S01", "NAMA MATA PELAJARAN": "BAHASA MELAYU", WARNA_HEX: "#ef4444", AKTIF: "YA" },
+                { ID_SUBJEK: "S02", "NAMA MATA PELAJARAN": "BAHASA INGGERIS", WARNA_HEX: "#3b82f6", AKTIF: "YA" },
+                { ID_SUBJEK: "S03", "NAMA MATA PELAJARAN": "MATEMATIK", WARNA_HEX: "#10b981", AKTIF: "YA" },
+                { ID_SUBJEK: "S04", "NAMA MATA PELAJARAN": "SAINS", WARNA_HEX: "#8b5cf6", AKTIF: "YA" },
+                { ID_SUBJEK: "S05", "NAMA MATA PELAJARAN": "SEJARAH", WARNA_HEX: "#f59e0b", AKTIF: "YA" }
+            ],
+            markah: [
+                { ID_PELAJAR: "P001", ID_SUBJEK: "S01", NAMA_EXAM: "PEPERIKSAAN PERTENGAHAN TAHUN", MARKAH: "85", GRED: "A", TAHUN: "2024" },
+                { ID_PELAJAR: "P001", ID_SUBJEK: "S03", NAMA_EXAM: "PEPERIKSAAN PERTENGAHAN TAHUN", MARKAH: "90", GRED: "A+", TAHUN: "2024" },
+                { ID_PELAJAR: "P002", ID_SUBJEK: "S01", NAMA_EXAM: "PEPERIKSAAN PERTENGAHAN TAHUN", MARKAH: "76", GRED: "B", TAHUN: "2024" },
+                { ID_PELAJAR: "P002", ID_SUBJEK: "S02", NAMA_EXAM: "PEPERIKSAAN PERTENGAHAN TAHUN", MARKAH: "88", GRED: "A", TAHUN: "2024" },
+                { ID_PELAJAR: "P003", ID_SUBJEK: "S03", NAMA_EXAM: "PEPERIKSAAN PERTENGAHAN TAHUN", MARKAH: "95", GRED: "A+", TAHUN: "2024" },
+                { ID_PELAJAR: "P003", ID_SUBJEK: "S04", NAMA_EXAM: "PEPERIKSAAN PERTENGAHAN TAHUN", MARKAH: "82", GRED: "A", TAHUN: "2024" },
+                { ID_PELAJAR: "P004", ID_SUBJEK: "S02", NAMA_EXAM: "PEPERIKSAAN PERTENGAHAN TAHUN", MARKAH: "65", GRED: "C", TAHUN: "2024" },
+                { ID_PELAJAR: "P004", ID_SUBJEK: "S05", NAMA_EXAM: "PEPERIKSAAN PERTENGAHAN TAHUN", MARKAH: "78", GRED: "B+", TAHUN: "2024" },
+                { ID_PELAJAR: "P005", ID_SUBJEK: "S01", NAMA_EXAM: "PEPERIKSAAN PERTENGAHAN TAHUN", MARKAH: "55", GRED: "C", TAHUN: "2024" },
+                { ID_PELAJAR: "P005", ID_SUBJEK: "S04", NAMA_EXAM: "PEPERIKSAAN PERTENGAHAN TAHUN", MARKAH: "72", GRED: "B", TAHUN: "2024" }
+            ]
+        };
+
+        // Application State
+        const state = {
+            credentials: { id: 'admin', pass: 'admin123' },
+            data: { pelajar: [], subjek: [], markah: [] },
+            isLoaded: false,
+            charts: { bar: null, pie: null },
+            currentRole: null, // 'admin' atau 'student'
+            currentStudentId: null
+        };
+
+        // Google Sheets CSV URLs
+        const urls = {
+            pelajar: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQPSABvG_ID3xt4LH6cU57JaRd6SmrDIgNnouGzS41sF5sa7JT3spErgKOngRbtjY0wI6r4dsM2XqFX/pub?output=csv",
+            subjek: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQPSABvG_ID3xt4LH6cU57JaRd6SmrDIgNnouGzS41sF5sa7JT3spErgKOngRbtjY0wI6r4dsM2XqFX/pub?gid=1648323365&single=true&output=csv",
+            markah: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQPSABvG_ID3xt4LH6cU57JaRd6SmrDIgNnouGzS41sF5sa7JT3spErgKOngRbtjY0wI6r4dsM2XqFX/pub?gid=405580445&single=true&output=csv"
+        };
+
+        // --- UTILITIES ---
+
+        // Parse CSV string to JSON
+        function parseCSV(str) {
+            let lines = str.split(/\r?\n/).filter(l => l.trim() !== '');
+            if(lines.length === 0) return [];
+            
+            // Regex to handle commas inside quotes
+            const splitRegex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
+            
+            let headers = lines[0].split(splitRegex).map(h => h.replace(/^"|"$/g, '').trim());
+            let result = [];
+            
+            for(let i=1; i<lines.length; i++){
+                let obj = {};
+                let currentline = lines[i].split(splitRegex).map(v => v.replace(/^"|"$/g, '').trim());
+                for(let j=0; j<headers.length; j++){
+                    obj[headers[j]] = currentline[j] || "";
+                }
+                result.push(obj);
+            }
+            return result;
+        }
+
+        // Fetch Data Wrapper
+        async function fetchAllData() {
+            // Tunjuk loader di skrin log masuk
+            const loginLoader = document.getElementById('login-data-loading');
+            const studentBox = document.getElementById('student-login-box');
+            
+            if(loginLoader) loginLoader.classList.remove('hide');
+            
+            try {
+                const [resPelajar, resSubjek, resMarkah] = await Promise.all([
+                    fetch(urls.pelajar),
+                    fetch(urls.subjek),
+                    fetch(urls.markah)
+                ]);
+
+                if(!resPelajar.ok || !resSubjek.ok || !resMarkah.ok) throw new Error("CORS or Network Error");
+
+                const csvPelajar = await resPelajar.text();
+                const csvSubjek = await resSubjek.text();
+                const csvMarkah = await resMarkah.text();
+
+                state.data.pelajar = parseCSV(csvPelajar);
+                state.data.subjek = parseCSV(csvSubjek);
+                state.data.markah = parseCSV(csvMarkah);
+                
+                if(state.data.pelajar.length === 0) throw new Error("Empty Data");
+                console.log("Data loaded from Google Sheets");
+
+            } catch (err) {
+                console.warn("Failed to fetch live Google Sheets. Using mock data.", err);
+                state.data.pelajar = JSON.parse(JSON.stringify(mockData.pelajar));
+                state.data.subjek = JSON.parse(JSON.stringify(mockData.subjek));
+                state.data.markah = JSON.parse(JSON.stringify(mockData.markah));
+            } finally {
+                // Sembunyikan loader dan tunjukkan kotak log masuk pelajar
+                if(loginLoader) loginLoader.classList.add('hide');
+                if(studentBox) studentBox.classList.remove('hide');
+                state.isLoaded = true;
+            }
+        }
+
+        // Panggil fetch data sebaik sahaja halaman dimuatkan
+        window.onload = fetchAllData;
+
+        // --- AUTH & NAVIGATION ---
+        
+        // Fungsi tukar paparan log masuk
+        function toggleLogin(type) {
+            document.getElementById('student-login-box').classList.add('hide');
+            document.getElementById('admin-login-box').classList.add('hide');
+            
+            if(type === 'admin') {
+                document.getElementById('admin-login-box').classList.remove('hide');
+            } else {
+                document.getElementById('student-login-box').classList.remove('hide');
+            }
+        }
+
+        // Log Masuk Pelajar / Ibu Bapa
+        document.getElementById('student-login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const input = document.getElementById('student-login-id').value.trim().toUpperCase();
+            
+            // Cari pelajar berdasarkan ID Pelajar ATAU No IC
+            const pelajarInfo = state.data.pelajar.find(p => 
+                (p.ID_PELAJAR && p.ID_PELAJAR.toUpperCase() === input) || 
+                (p.NO_IC && p.NO_IC === input)
+            );
+
+            if(pelajarInfo) {
+                state.currentRole = 'student';
+                state.currentStudentId = pelajarInfo.ID_PELAJAR;
+                
+                document.getElementById('login-view').classList.add('hide');
+                document.getElementById('student-login-error').classList.add('hide');
+                document.getElementById('student-portal-layout').classList.remove('hide');
+                
+                initStudentPortal();
+            } else {
+                document.getElementById('student-login-error').classList.remove('hide');
+            }
+        });
+
+        // Log Masuk Admin
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('login-id').value;
+            const pass = document.getElementById('login-pass').value;
+            
+            if(id === state.credentials.id && pass === state.credentials.pass) {
+                state.currentRole = 'admin';
+                document.getElementById('login-view').classList.add('hide');
+                document.getElementById('app-layout').classList.remove('hide');
+                
+                initApp();
+            } else {
+                document.getElementById('login-error').classList.remove('hide');
+            }
+        });
+
+        function logout() {
+            // Reset Views
+            document.getElementById('app-layout').classList.add('hide');
+            document.getElementById('student-portal-layout').classList.add('hide');
+            document.getElementById('login-view').classList.remove('hide');
+            
+            // Reset Inputs & Errors
+            document.getElementById('login-id').value = '';
+            document.getElementById('login-pass').value = '';
+            document.getElementById('student-login-id').value = '';
+            document.getElementById('login-error').classList.add('hide');
+            document.getElementById('student-login-error').classList.add('hide');
+            
+            // Tunjuk default box (Student)
+            toggleLogin('student');
+            
+            state.currentRole = null;
+            state.currentStudentId = null;
+        }
+
+        // --- STUDENT PORTAL LOGIC ---
+        function initStudentPortal() {
+            // Populate Dropdown Peperiksaan untuk Pelajar ini
+            const examSelect = document.getElementById('portal-exam-filter');
+            const studentMarks = state.data.markah.filter(m => m.ID_PELAJAR === state.currentStudentId);
+            const uniqueExam = [...new Set(studentMarks.map(m => m.NAMA_EXAM))].filter(Boolean).sort();
+            
+            examSelect.innerHTML = '<option value="ALL">Kompilasi Keseluruhan</option>';
+            uniqueExam.forEach(e => {
+                examSelect.innerHTML += `<option value="${e}">${e}</option>`;
+            });
+
+            renderStudentPortalData();
+        }
+
+        function renderStudentPortalData() {
+            const idPelajar = state.currentStudentId;
+            const pelajar = state.data.pelajar.find(p => p.ID_PELAJAR === idPelajar);
+            if (!pelajar) return;
+
+            // Masukkan Info Pelajar
+            document.getElementById('portal-welcome-name').innerText = pelajar["NAMA PENUH"] || '';
+            document.getElementById('portal-nama').innerText = pelajar["NAMA PENUH"] || '-';
+            document.getElementById('portal-id').innerText = pelajar.ID_PELAJAR || '-';
+            document.getElementById('portal-ic').innerText = pelajar.NO_IC || '-';
+            document.getElementById('portal-kelas').innerText = pelajar.KELAS || '-';
+            
+            // Tarikh Semasa
+            const today = new Date();
+            document.getElementById('portal-tarikh').innerText = today.toLocaleDateString('ms-MY') + ' ' + today.toLocaleTimeString('ms-MY');
+
+            const selectedExam = document.getElementById('portal-exam-filter').value;
+            document.getElementById('portal-peperiksaan-label').innerText = selectedExam === "ALL" ? "KOMPILASI KESELURUHAN" : selectedExam;
+
+            // Cari Markah Pelajar
+            let markahPelajar = state.data.markah.filter(m => m.ID_PELAJAR === idPelajar);
+            
+            if(selectedExam !== "ALL") {
+                markahPelajar = markahPelajar.filter(m => m.NAMA_EXAM === selectedExam);
+            }
+            
+            const tbody = document.getElementById('portal-table-body');
+            tbody.innerHTML = '';
+            
+            let totalMarks = 0;
+
+            if(markahPelajar.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-500">Tiada rekod peperiksaan dijumpai.</td></tr>`;
+            } else {
+                markahPelajar.forEach(m => {
+                    const subjek = state.data.subjek.find(s => s.ID_SUBJEK === m.ID_SUBJEK) || {};
+                    const namaSubjek = subjek["NAMA MATA PELAJARAN"] || m.ID_SUBJEK;
+                    const markahInt = parseInt(m.MARKAH || 0);
+                    
+                    totalMarks += markahInt;
+                    
+                    let gredColor = "text-slate-700";
+                    if(markahInt >= 80) gredColor = "text-emerald-600";
+                    else if(markahInt < 40) gredColor = "text-red-600";
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-5 font-medium text-slate-800">${namaSubjek}</td>
+                            <td class="py-3 px-5 text-slate-600">${m.NAMA_EXAM || '-'}</td>
+                            <td class="py-3 px-5 text-center font-semibold text-slate-800">${m.MARKAH}</td>
+                            <td class="py-3 px-5 text-center font-bold ${gredColor}">${m.GRED || '-'}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            const purata = markahPelajar.length > 0 ? (totalMarks / markahPelajar.length).toFixed(1) : 0;
+            document.getElementById('portal-jumlah-subjek').innerText = markahPelajar.length;
+            document.getElementById('portal-purata').innerText = purata + '%';
+        }
+
+        const tabTitles = {
+            'dashboard': 'Ringkasan Prestasi',
+            'pelajar': 'Data & Direktori Pelajar',
+            'pentadbiran': 'Panel Pentadbiran',
+            'tetapan': 'Tetapan Sistem'
+        };
+
+        function switchTab(tabId) {
+            // Update Menu UI
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`nav-${tabId}`).classList.add('active');
+            
+            // Update Title
+            document.getElementById('page-title').innerText = tabTitles[tabId];
+            
+            // Hide all views
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hide'));
+            
+            // Show selected view
+            document.getElementById(`view-${tabId}`).classList.remove('hide');
+
+            // Specific View Logic
+            if(tabId === 'dashboard') updateDashboard();
+            if(tabId === 'pelajar') renderPelajarTable();
+        }
+
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            if(sidebar.style.display === 'none' || sidebar.style.display === '') {
+                sidebar.style.display = 'flex';
+                sidebar.style.position = 'absolute';
+                sidebar.style.height = '100%';
+            } else {
+                sidebar.style.display = 'none';
+            }
+        });
+
+        // --- CORE APPLICATION LOGIC ---
+
+        function initApp() {
+            populateSubjectFilter();
+            populateDirektoriFilters();
+            updateDashboard();
+            renderPelajarTable();
+            
+            // Sync color picker
+            document.getElementById('add-warna').addEventListener('input', function() {
+                document.getElementById('add-warna-text').value = this.value;
+            });
+            document.getElementById('add-warna-text').addEventListener('input', function() {
+                document.getElementById('add-warna').value = this.value;
+            });
+        }
+
+        function populateSubjectFilter() {
+            const select = document.getElementById('filter-subjek');
+            select.innerHTML = '<option value="ALL">Semua Subjek</option>';
+            state.data.subjek.forEach(sub => {
+                if(sub.AKTIF === 'YA') {
+                    select.innerHTML += `<option value="${sub.ID_SUBJEK}">${sub["NAMA MATA PELAJARAN"]}</option>`;
+                }
+            });
+        }
+
+        function populateDirektoriFilters() {
+            const kelasSelect = document.getElementById('filter-kelas-dir');
+            const examSelect = document.getElementById('filter-exam-dir');
+            const subjekSelect = document.getElementById('filter-subjek-dir');
+            
+            // Populate Kelas Dinamik
+            const uniqueKelas = [...new Set(state.data.pelajar.map(p => p.KELAS))].filter(Boolean).sort();
+            kelasSelect.innerHTML = '<option value="ALL">Semua Kelas</option>';
+            uniqueKelas.forEach(k => {
+                kelasSelect.innerHTML += `<option value="${k}">${k}</option>`;
+            });
+
+            // Populate Exam Dinamik
+            const uniqueExam = [...new Set(state.data.markah.map(m => m.NAMA_EXAM))].filter(Boolean).sort();
+            examSelect.innerHTML = '<option value="ALL">Semua Peperiksaan</option>';
+            uniqueExam.forEach(e => {
+                examSelect.innerHTML += `<option value="${e}">${e}</option>`;
+            });
+
+            // Populate Subjek Dinamik
+            subjekSelect.innerHTML = '<option value="ALL">Semua Subjek</option>';
+            state.data.subjek.forEach(s => {
+                if(s.AKTIF === 'YA') {
+                    subjekSelect.innerHTML += `<option value="${s.ID_SUBJEK}">${s["NAMA MATA PELAJARAN"]}</option>`;
+                }
+            });
+        }
+
+        function updateDashboard() {
+            const filterSubjek = document.getElementById('filter-subjek').value;
+            const pelajar = state.data.pelajar;
+            const subjek = state.data.subjek;
+            let markah = state.data.markah;
+
+            // Summary Stats
+            document.getElementById('stat-pelajar').innerText = pelajar.length;
+            
+            const aktifSubjek = subjek.filter(s => s.AKTIF === "YA").length;
+            document.getElementById('stat-subjek').innerText = aktifSubjek;
+
+            if(filterSubjek !== "ALL") {
+                markah = markah.filter(m => m.ID_SUBJEK === filterSubjek);
+            }
+
+            // Calculate Average & Top A's
+            if(markah.length > 0) {
+                const totalM = markah.reduce((sum, m) => sum + parseInt(m.MARKAH || 0), 0);
+                const avg = (totalM / markah.length).toFixed(1);
+                document.getElementById('stat-purata').innerText = `${avg}%`;
+
+                const As = markah.filter(m => m.GRED && m.GRED.includes('A')).length;
+                document.getElementById('stat-cemerlang').innerText = As;
+            } else {
+                document.getElementById('stat-purata').innerText = `0%`;
+                document.getElementById('stat-cemerlang').innerText = "0";
+            }
+
+            renderCharts(markah, filterSubjek);
+            renderTopStudents(markah);
+        }
+
+        function renderCharts(filteredMarkah, subjectId) {
+            // Destroy existing instances
+            if(state.charts.bar) state.charts.bar.destroy();
+            if(state.charts.pie) state.charts.pie.destroy();
+
+            // Prepare Bar Chart Data (Average by Subject)
+            // If specific subject, show individual scores. If ALL, show average per subject
+            let barLabels = [];
+            let barData = [];
+            let barColors = [];
+
+            if(subjectId === "ALL") {
+                const subjectAverages = {};
+                state.data.subjek.forEach(s => {
+                    if(s.AKTIF === "YA") subjectAverages[s.ID_SUBJEK] = { name: s["NAMA MATA PELAJARAN"], total: 0, count: 0, color: s.WARNA_HEX || '#4f46e5' };
+                });
+                
+                filteredMarkah.forEach(m => {
+                    if(subjectAverages[m.ID_SUBJEK]) {
+                        subjectAverages[m.ID_SUBJEK].total += parseInt(m.MARKAH || 0);
+                        subjectAverages[m.ID_SUBJEK].count += 1;
+                    }
+                });
+
+                for(let key in subjectAverages) {
+                    if(subjectAverages[key].count > 0) {
+                        barLabels.push(subjectAverages[key].name);
+                        barData.push((subjectAverages[key].total / subjectAverages[key].count).toFixed(2));
+                        barColors.push(subjectAverages[key].color);
+                    }
+                }
+            } else {
+                // Specific subject: Show top 10 students
+                let sortedMarkah = [...filteredMarkah].sort((a,b) => b.MARKAH - a.MARKAH).slice(0, 10);
+                const subjectObj = state.data.subjek.find(s => s.ID_SUBJEK === subjectId);
+                const color = subjectObj ? (subjectObj.WARNA_HEX || '#4f46e5') : '#4f46e5';
+
+                sortedMarkah.forEach(m => {
+                    const p = state.data.pelajar.find(pl => pl.ID_PELAJAR === m.ID_PELAJAR);
+                    barLabels.push(p ? p["NAMA PENUH"].substring(0,10)+'...' : m.ID_PELAJAR);
+                    barData.push(m.MARKAH);
+                    barColors.push(color);
+                });
+            }
+
+            const ctxBar = document.getElementById('barChart').getContext('2d');
+            state.charts.bar = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: barLabels,
+                    datasets: [{
+                        label: subjectId === "ALL" ? 'Purata Markah (%)' : 'Markah Pelajar',
+                        data: barData,
+                        backgroundColor: barColors,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, max: 100 } }
+                }
+            });
+
+            // Prepare Doughnut Chart Data (Grade Distribution)
+            const gradeDist = { "A":0, "B":0, "C":0, "D":0, "E":0, "F":0 };
+            filteredMarkah.forEach(m => {
+                let g = (m.GRED || "").charAt(0).toUpperCase();
+                if(gradeDist[g] !== undefined) gradeDist[g]++;
+            });
+
+            const ctxPie = document.getElementById('pieChart').getContext('2d');
+            state.charts.pie = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Gred A', 'Gred B', 'Gred C', 'Gred D', 'Gred E', 'Gagal (F)'],
+                    datasets: [{
+                        data: [gradeDist.A, gradeDist.B, gradeDist.C, gradeDist.D, gradeDist.E, gradeDist.F],
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#64748b', '#ef4444'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        function renderTopStudents(markahArray) {
+            const tbody = document.getElementById('top-students-table');
+            tbody.innerHTML = '';
+            
+            // Sort by markah highest
+            let top5 = [...markahArray].sort((a,b) => parseInt(b.MARKAH) - parseInt(a.MARKAH)).slice(0, 5);
+            
+            if(top5.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500">Tiada rekod dijumpai</td></tr>`;
+                return;
+            }
+
+            top5.forEach(m => {
+                const pelajar = state.data.pelajar.find(p => p.ID_PELAJAR === m.ID_PELAJAR) || {};
+                const subjek = state.data.subjek.find(s => s.ID_SUBJEK === m.ID_SUBJEK) || {};
+                
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-medium text-slate-800">${pelajar["NAMA PENUH"] || 'Tidak diketahui'}</td>
+                    <td class="py-3 px-4 text-slate-600">${pelajar.KELAS || '-'}</td>
+                    <td class="py-3 px-4 text-slate-600"><span class="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs">${m.NAMA_EXAM || 'Exam'}</span></td>
+                    <td class="py-3 px-4">
+                        <span class="px-2 py-1 rounded text-xs font-medium text-white" style="background-color: ${subjek.WARNA_HEX || '#4f46e5'}">
+                            ${subjek["NAMA MATA PELAJARAN"] || m.ID_SUBJEK}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-right font-bold ${parseInt(m.MARKAH) >= 80 ? 'text-emerald-600' : 'text-slate-700'}">
+                        ${m.MARKAH}% (${m.GRED})
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderPelajarTable() {
+            const tbody = document.getElementById('table-pelajar-body');
+            const search = document.getElementById('search-pelajar').value.toLowerCase();
+            
+            // Ambil nilai dari filter baru
+            const filterKelas = document.getElementById('filter-kelas-dir').value;
+            const filterExam = document.getElementById('filter-exam-dir').value;
+            const filterSubjek = document.getElementById('filter-subjek-dir').value;
+            
+            tbody.innerHTML = '';
+
+            let data = state.data.pelajar;
+            
+            // 1. Tapis mengikut Carian Teks
+            if(search) {
+                data = data.filter(p => 
+                    (p["NAMA PENUH"] || "").toLowerCase().includes(search) || 
+                    (p.ID_PELAJAR || "").toLowerCase().includes(search) ||
+                    (p.NO_IC || "").toLowerCase().includes(search) ||
+                    (p.KELAS || "").toLowerCase().includes(search)
+                );
+            }
+
+            // 2. Tapis mengikut Kelas/Tingkatan
+            if(filterKelas !== "ALL") {
+                data = data.filter(p => p.KELAS === filterKelas);
+            }
+
+            // 3. Tapis mengikut Peperiksaan & Subjek (Hanya senaraikan pelajar yang ada rekod exam/subjek tersebut)
+            if(filterExam !== "ALL" || filterSubjek !== "ALL") {
+                data = data.filter(p => {
+                    return state.data.markah.some(m => {
+                        let match = m.ID_PELAJAR === p.ID_PELAJAR;
+                        if(filterExam !== "ALL") match = match && m.NAMA_EXAM === filterExam;
+                        if(filterSubjek !== "ALL") match = match && m.ID_SUBJEK === filterSubjek;
+                        return match;
+                    });
+                });
+            }
+
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-500">Tiada rekod pelajar dijumpai berdasarkan tapisan anda</td></tr>`;
+                return;
+            }
+
+            data.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+                tr.innerHTML = `
+                    <td class="py-3 px-5 font-medium text-slate-500">${p.ID_PELAJAR}</td>
+                    <td class="py-3 px-5 font-semibold text-slate-800">${p["NAMA PENUH"]}</td>
+                    <td class="py-3 px-5 text-slate-600">${p.NO_IC}</td>
+                    <td class="py-3 px-5 text-slate-600"><span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-medium border border-indigo-100">${p.KELAS}</span></td>
+                    <td class="py-3 px-5 text-center">
+                        <button onclick="paparSlip('${p.ID_PELAJAR}')" class="text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded text-sm font-medium transition-colors">
+                            Lihat Slip
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- SLIP KEPUTUSAN LOGIC ---
+        
+        function paparSlip(idPelajar) {
+            const pelajar = state.data.pelajar.find(p => p.ID_PELAJAR === idPelajar);
+            if (!pelajar) return;
+
+            // Masukkan Info Pelajar
+            document.getElementById('slip-nama').innerText = pelajar["NAMA PENUH"] || '-';
+            document.getElementById('slip-id').innerText = pelajar.ID_PELAJAR || '-';
+            document.getElementById('slip-ic').innerText = pelajar.NO_IC || '-';
+            document.getElementById('slip-kelas').innerText = pelajar.KELAS || '-';
+            
+            // Masukkan Tarikh Semasa untuk Cetakan
+            const today = new Date();
+            document.getElementById('slip-tarikh').innerText = today.toLocaleDateString('ms-MY');
+
+            // --- Logik Penapisan Markah Mengikut Filter Peperiksaan ---
+            const selectedExam = document.getElementById('filter-exam-dir').value;
+            
+            // Ubah Label peperiksaan di slip
+            document.getElementById('slip-peperiksaan-label').innerText = selectedExam === "ALL" ? "KOMPILASI KESELURUHAN" : selectedExam;
+
+            // Cari Markah Pelajar
+            let markahPelajar = state.data.markah.filter(m => m.ID_PELAJAR === idPelajar);
+            
+            // Jika peperiksaan spesifik dipilih di filter, tunjuk markah exam tersebut sahaja!
+            if(selectedExam !== "ALL") {
+                markahPelajar = markahPelajar.filter(m => m.NAMA_EXAM === selectedExam);
+            }
+            
+            const tbody = document.getElementById('slip-table-body');
+            tbody.innerHTML = '';
+            
+            let totalMarks = 0;
+
+            if(markahPelajar.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-500">Tiada rekod peperiksaan dijumpai bagi pelajar ini.</td></tr>`;
+            } else {
+                markahPelajar.forEach(m => {
+                    const subjek = state.data.subjek.find(s => s.ID_SUBJEK === m.ID_SUBJEK) || {};
+                    const namaSubjek = subjek["NAMA MATA PELAJARAN"] || m.ID_SUBJEK;
+                    const markahInt = parseInt(m.MARKAH || 0);
+                    
+                    totalMarks += markahInt;
+                    
+                    // Style untuk Gred
+                    let gredColor = "text-slate-700";
+                    if(markahInt >= 80) gredColor = "text-emerald-600";
+                    else if(markahInt < 40) gredColor = "text-red-600";
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-5 font-medium text-slate-800">${namaSubjek}</td>
+                            <td class="py-3 px-5 text-slate-600">${m.NAMA_EXAM || '-'}</td>
+                            <td class="py-3 px-5 text-center font-semibold text-slate-800">${m.MARKAH}</td>
+                            <td class="py-3 px-5 text-center font-bold ${gredColor}">${m.GRED || '-'}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // Kira Rumusan
+            const purata = markahPelajar.length > 0 ? (totalMarks / markahPelajar.length).toFixed(1) : 0;
+            document.getElementById('slip-jumlah-subjek').innerText = markahPelajar.length;
+            document.getElementById('slip-purata').innerText = purata + '%';
+
+            // Papar Modal
+            document.getElementById('modal-slip').classList.remove('hide');
+        }
+
+        function tutupSlip() {
+            document.getElementById('modal-slip').classList.add('hide');
+        }
+
+        function cetakSlip() {
+            window.print();
+        }
+
+        // --- PENTADBIRAN & TETAPAN LOGIC ---
+
+        function handleFormSubmit(e, type) {
+            e.preventDefault();
+            if(type === 'pelajar') {
+                const newP = {
+                    ID_PELAJAR: document.getElementById('add-id-pelajar').value.toUpperCase(),
+                    "NAMA PENUH": document.getElementById('add-nama').value.toUpperCase(),
+                    NO_IC: document.getElementById('add-ic').value,
+                    KELAS: document.getElementById('add-kelas').value.toUpperCase()
+                };
+                state.data.pelajar.push(newP);
+                alert(`Pelajar ${newP["NAMA PENUH"]} berjaya ditambah (Mock Data).`);
+                e.target.reset();
+                renderPelajarTable();
+            } 
+            else if(type === 'subjek') {
+                const newS = {
+                    ID_SUBJEK: document.getElementById('add-id-subjek').value.toUpperCase(),
+                    "NAMA MATA PELAJARAN": document.getElementById('add-nama-subjek').value.toUpperCase(),
+                    WARNA_HEX: document.getElementById('add-warna').value,
+                    AKTIF: document.getElementById('add-status').value
+                };
+                state.data.subjek.push(newS);
+                populateSubjectFilter();
+                alert(`Subjek ${newS["NAMA MATA PELAJARAN"]} berjaya ditambah (Mock Data).`);
+                e.target.reset();
+            }
+        }
+
+        function updateSettings(e) {
+            e.preventDefault();
+            const id = document.getElementById('set-id').value;
+            const pass = document.getElementById('set-pass').value;
+            
+            if(id && pass) {
+                state.credentials.id = id;
+                state.credentials.pass = pass;
+                alert("ID dan Kata Laluan berjaya dikemaskini. Sila ingat maklumat baru ini untuk sesi ini.");
+            }
+        }
+
+    </script>
+</body>
+</html>
