@@ -2,8 +2,12 @@
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EduTrack - Dashboard Prestasi Pelajar</title>
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
@@ -139,52 +143,65 @@
     </div>
 
     <!-- MAIN APP LAYOUT -->
-    <div id="app-layout" class="flex h-screen w-full bg-slate-50 hide">
+    <div id="app-layout" class="flex h-screen w-full bg-slate-50 hide relative">
         
+        <!-- Mobile Sidebar Overlay -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/50 z-40 hidden lg:hidden backdrop-blur-sm transition-opacity" onclick="toggleSidebarMobile()"></div>
+
         <!-- Sidebar -->
-        <aside class="w-64 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 z-20" id="sidebar">
-            <div class="h-16 flex items-center px-6 border-b border-slate-200">
-                <i class="fa-solid fa-graduation-cap text-2xl text-indigo-600 mr-3"></i>
-                <span class="text-xl font-bold text-slate-800 tracking-tight">EduTrack</span>
+        <aside class="w-64 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 z-50 absolute inset-y-0 left-0 transform -translate-x-full lg:relative lg:translate-x-0 shrink-0 shadow-xl lg:shadow-none" id="sidebar">
+            <div class="h-16 flex items-center justify-between px-4 border-b border-slate-200 shrink-0">
+                <div class="flex items-center overflow-hidden">
+                    <i class="fa-solid fa-graduation-cap text-2xl text-indigo-600 min-w-[24px]"></i>
+                    <span class="text-xl font-bold text-slate-800 tracking-tight ml-3 sidebar-text whitespace-nowrap">EduTrack</span>
+                </div>
+                <!-- Desktop Toggle Button -->
+                <button onclick="toggleSidebarDesktop()" class="hidden lg:flex items-center justify-center w-8 h-8 rounded text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <!-- Mobile Close Button -->
+                <button onclick="toggleSidebarMobile()" class="lg:hidden w-8 h-8 flex items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
             </div>
             
-            <nav class="flex-1 py-4 flex flex-col gap-1 px-3">
-                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active flex items-center w-full px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors text-left">
-                    <i class="fa-solid fa-chart-pie w-6 text-center"></i>
-                    <span class="ml-2">Dashboard</span>
+            <nav class="flex-1 py-4 flex flex-col gap-1 px-3 overflow-x-hidden">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active flex items-center w-full px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors text-left group" title="Dashboard">
+                    <i class="fa-solid fa-chart-pie w-6 text-center shrink-0"></i>
+                    <span class="ml-3 sidebar-text whitespace-nowrap">Dashboard</span>
                 </button>
-                <button onclick="switchTab('pelajar')" id="nav-pelajar" class="nav-item flex items-center w-full px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors text-left">
-                    <i class="fa-solid fa-users w-6 text-center"></i>
-                    <span class="ml-2">Data Pelajar</span>
+                <button onclick="switchTab('pelajar')" id="nav-pelajar" class="nav-item flex items-center w-full px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors text-left group" title="Data Pelajar">
+                    <i class="fa-solid fa-users w-6 text-center shrink-0"></i>
+                    <span class="ml-3 sidebar-text whitespace-nowrap">Data Pelajar</span>
                 </button>
-                <button onclick="switchTab('pentadbiran')" id="nav-pentadbiran" class="nav-item flex items-center w-full px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors text-left">
-                    <i class="fa-solid fa-clipboard-list w-6 text-center"></i>
-                    <span class="ml-2">Pentadbiran</span>
+                <button onclick="switchTab('pentadbiran')" id="nav-pentadbiran" class="nav-item flex items-center w-full px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors text-left group" title="Pentadbiran">
+                    <i class="fa-solid fa-clipboard-list w-6 text-center shrink-0"></i>
+                    <span class="ml-3 sidebar-text whitespace-nowrap">Pentadbiran</span>
                 </button>
-                <button onclick="switchTab('tetapan')" id="nav-tetapan" class="nav-item flex items-center w-full px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors text-left">
-                    <i class="fa-solid fa-gear w-6 text-center"></i>
-                    <span class="ml-2">Tetapan Sistem</span>
+                <button onclick="switchTab('tetapan')" id="nav-tetapan" class="nav-item flex items-center w-full px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors text-left group" title="Tetapan Sistem">
+                    <i class="fa-solid fa-gear w-6 text-center shrink-0"></i>
+                    <span class="ml-3 sidebar-text whitespace-nowrap">Tetapan Sistem</span>
                 </button>
             </nav>
             
-            <div class="p-4 border-t border-slate-200">
-                <button onclick="logout()" class="flex items-center w-full px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors font-medium">
-                    <i class="fa-solid fa-sign-out-alt w-6 text-center"></i>
-                    <span class="ml-2">Log Keluar</span>
+            <div class="p-4 border-t border-slate-200 overflow-x-hidden">
+                <button onclick="logout()" class="flex items-center w-full px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors font-medium group" title="Log Keluar">
+                    <i class="fa-solid fa-sign-out-alt w-6 text-center shrink-0"></i>
+                    <span class="ml-3 sidebar-text whitespace-nowrap">Log Keluar</span>
                 </button>
             </div>
         </aside>
 
         <!-- Main Content Area -->
-        <main class="flex-1 flex flex-col overflow-hidden relative">
+        <main class="flex-1 min-w-0 flex flex-col overflow-hidden relative">
             
             <!-- Topbar -->
-            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-10 shadow-sm">
-                <div class="flex items-center">
-                    <button id="mobile-menu-btn" class="lg:hidden text-slate-500 hover:text-indigo-600 mr-4">
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 z-10 shadow-sm shrink-0">
+                <div class="flex items-center min-w-0">
+                    <button onclick="toggleSidebarMobile()" class="lg:hidden text-slate-500 hover:text-indigo-600 mr-3 p-1">
                         <i class="fa-solid fa-bars text-xl"></i>
                     </button>
-                    <h2 id="page-title" class="text-lg font-bold text-slate-800">Ringkasan Prestasi</h2>
+                    <h2 id="page-title" class="text-base sm:text-lg font-bold text-slate-800 truncate">Ringkasan Prestasi</h2>
                 </div>
                 
                 <div class="flex items-center gap-4">
@@ -538,8 +555,8 @@
                         </div>
 
                         <!-- Jadual Markah -->
-                        <div class="border border-slate-200 rounded-xl overflow-hidden">
-                            <table class="w-full text-left border-collapse">
+                        <div class="border border-slate-200 rounded-xl overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[500px]">
                                 <thead class="bg-slate-100 print:bg-slate-50">
                                     <tr>
                                         <th class="py-3 px-5 font-semibold text-slate-700 border-b border-slate-200">Mata Pelajaran</th>
@@ -628,8 +645,8 @@
                 </div>
 
                 <!-- Jadual Markah -->
-                <div class="border border-slate-200 rounded-xl overflow-hidden">
-                    <table class="w-full text-left border-collapse">
+                <div class="border border-slate-200 rounded-xl overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[500px]">
                         <thead class="bg-slate-100 print:bg-slate-50">
                             <tr>
                                 <th class="py-3 px-5 font-semibold text-slate-700 border-b border-slate-200">Mata Pelajaran</th>
@@ -968,19 +985,56 @@
             // Specific View Logic
             if(tabId === 'dashboard') updateDashboard();
             if(tabId === 'pelajar') renderPelajarTable();
+            
+            // Auto-close sidebar on mobile after clicking a tab
+            if(window.innerWidth < 1024) {
+                const sidebar = document.getElementById('sidebar');
+                if(!sidebar.classList.contains('-translate-x-full')) {
+                    toggleSidebarMobile();
+                }
+            }
         }
 
-        // Mobile menu toggle
-        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+        // --- SIDEBAR TOGGLE LOGIC ---
+        let isSidebarCollapsed = false;
+
+        function toggleSidebarDesktop() {
             const sidebar = document.getElementById('sidebar');
-            if(sidebar.style.display === 'none' || sidebar.style.display === '') {
-                sidebar.style.display = 'flex';
-                sidebar.style.position = 'absolute';
-                sidebar.style.height = '100%';
+            const texts = document.querySelectorAll('.sidebar-text');
+            
+            isSidebarCollapsed = !isSidebarCollapsed;
+            
+            if (isSidebarCollapsed) {
+                sidebar.classList.remove('w-64');
+                sidebar.classList.add('w-20');
+                texts.forEach(t => t.classList.add('hidden'));
             } else {
-                sidebar.style.display = 'none';
+                sidebar.classList.remove('w-20');
+                sidebar.classList.add('w-64');
+                texts.forEach(t => t.classList.remove('hidden'));
             }
-        });
+            
+            // Resize charts smoothly after sidebar animation
+            setTimeout(() => {
+                if(state.charts.bar) state.charts.bar.resize();
+                if(state.charts.pie) state.charts.pie.resize();
+            }, 310);
+        }
+
+        function toggleSidebarMobile() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            
+            if (sidebar.classList.contains('-translate-x-full')) {
+                // Open Sidebar
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                // Close Sidebar
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
 
         // --- CORE APPLICATION LOGIC ---
 
