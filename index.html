@@ -27,7 +27,6 @@
     <script>
         tailwind.config = {
             // MATIKAN OPACITY PLUGINS: Ini penyelesaian utama untuk halang font/gambar nampak pudar dalam html2canvas.
-            // Ia memaksa Tailwind mengeluarkan kod warna Solid Hex (#64748b) dan bukannya rgb(r g b / var(--opacity)).
             corePlugins: {
                 textOpacity: false,
                 backgroundOpacity: false,
@@ -86,43 +85,78 @@
             width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- SIDEBAR RESPONSIVE & COLLAPSE LOGIC --- */
+        .sidebar {
+            transition: width 0.3s ease, transform 0.3s ease;
+            width: 16rem; /* 256px */
+        }
+        
+        /* Mobile logic */
+        @media (max-width: 767px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.expanded { transform: translateX(0); }
+        }
+        
+        /* Desktop logic: Minimized by default */
+        @media (min-width: 768px) {
+            .sidebar.collapsed { width: 5rem; /* 80px */ }
+            .sidebar.collapsed .hide-text { display: none; opacity: 0; }
+            .sidebar.collapsed .sidebar-item { justify-content: center; padding-left: 0; padding-right: 0; }
+            .sidebar.collapsed .item-icon { margin-right: 0; font-size: 1.5rem; }
+            
+            .sidebar.collapsed .logo-section { padding: 1.5rem 0.5rem; }
+            .sidebar.collapsed .logo-container { width: 3rem; height: 3rem; margin-bottom: 0; }
+            .sidebar.collapsed .logo-icon { font-size: 1.8rem; }
+            .sidebar.collapsed .logo-motto,
+            .sidebar.collapsed .logo-text { display: none; }
+            
+            .sidebar.collapsed .section-label { display: none; }
+            
+            .sidebar.collapsed .sidebar-footer { text-align: center; padding: 1rem 0; }
+            .sidebar.collapsed .sidebar-footer p { display: none; }
+            .sidebar.collapsed .sidebar-footer::after { content: "v1"; font-weight: bold; font-size: 0.75rem; color: #93c5fd; }
+        }
     </style>
 </head>
-<body class="text-slate-800 flex h-screen overflow-hidden">
+<body class="text-slate-800 flex h-screen overflow-hidden relative">
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden transition-opacity"></div>
 
     <!-- SIDEBAR -->
-    <aside class="w-64 bg-smkp-dark text-white flex flex-col h-full shadow-xl z-20 flex-shrink-0">
+    <aside id="sidebar" class="sidebar collapsed z-50 flex flex-col h-full bg-smkp-dark text-white shadow-xl flex-shrink-0 fixed md:relative">
         <!-- Logo Area -->
-        <div class="p-6 flex flex-col items-center border-b border-blue-900">
-            <div class="w-20 h-24 bg-white rounded-lg shadow-inner mb-3 flex items-center justify-center relative overflow-hidden">
-                <i class="ph-fill ph-student text-5xl text-smkp-dark"></i>
-                <div class="absolute bottom-0 w-full bg-blue-600 text-[8px] text-center font-bold py-1">ASPIRE NEVER TIRE</div>
+        <div class="logo-section p-4 md:p-6 flex flex-col items-center border-b border-blue-900 transition-all overflow-hidden">
+            <div class="logo-container w-20 h-24 bg-white rounded-lg shadow-inner mb-3 flex items-center justify-center relative overflow-hidden transition-all flex-shrink-0">
+                <i class="ph-fill ph-student text-5xl text-smkp-dark logo-icon transition-all"></i>
+                <div class="logo-motto absolute bottom-0 w-full bg-blue-600 text-[8px] text-center font-bold py-1">ASPIRE NEVER TIRE</div>
             </div>
-            <h1 class="text-lg font-bold tracking-wider">SMK (P) JALAN IPOH</h1>
-            <p class="text-xs text-blue-200 italic mt-1">Usaha Tanpa Jemu</p>
+            <h1 class="logo-text text-lg font-bold tracking-wider text-center whitespace-nowrap">SMK (P) JALAN IPOH</h1>
+            <p class="logo-text text-xs text-blue-200 italic mt-1 text-center whitespace-nowrap">Usaha Tanpa Jemu</p>
         </div>
 
         <!-- Navigation -->
-        <nav class="flex-1 overflow-y-auto py-4">
+        <nav class="flex-1 overflow-y-auto py-4 overflow-x-hidden">
             <ul class="space-y-1">
-                <li><a href="#" onclick="switchView('dashboard', this)" class="sidebar-item active flex items-center px-6 py-3 text-sm hover:bg-smkp-light transition-colors"><i class="ph-fill ph-house mr-3 text-lg"></i> Dashboard</a></li>
-                <li><a href="#" onclick="switchView('pelajar', this)" class="sidebar-item flex items-center px-6 py-3 text-sm hover:bg-smkp-light transition-colors"><i class="ph-fill ph-users mr-3 text-lg"></i> Carian Murid</a></li>
-                <li><a href="#" onclick="switchView('analisis', this)" class="sidebar-item flex items-center px-6 py-3 text-sm hover:bg-smkp-light transition-colors"><i class="ph-fill ph-chart-polar mr-3 text-lg"></i> Analisis Subjek</a></li>
-                <li class="mt-4 mb-2 px-6"><span class="text-xs font-semibold text-blue-300 uppercase tracking-wider">Sistem</span></li>
-                <li><a href="#" onclick="switchView('admin', this)" class="sidebar-item flex items-center px-6 py-3 text-sm hover:bg-smkp-light transition-colors"><i class="ph-fill ph-database mr-3 text-lg"></i> Pentadbiran</a></li>
-                <li><a href="#" onclick="switchView('tetapan', this)" class="sidebar-item flex items-center px-6 py-3 text-sm hover:bg-smkp-light transition-colors"><i class="ph-fill ph-gear mr-3 text-lg"></i> Tetapan</a></li>
+                <li><a href="#" onclick="switchView('dashboard', this)" class="sidebar-item active flex items-center px-6 py-3 text-sm hover:bg-smkp-light transition-all"><i class="ph-fill ph-house mr-3 text-lg item-icon"></i> <span class="hide-text whitespace-nowrap">Dashboard</span></a></li>
+                <li><a href="#" onclick="switchView('pelajar', this)" class="sidebar-item flex items-center px-6 py-3 text-sm hover:bg-smkp-light transition-all"><i class="ph-fill ph-users mr-3 text-lg item-icon"></i> <span class="hide-text whitespace-nowrap">Carian Murid</span></a></li>
+                <li><a href="#" onclick="switchView('analisis', this)" class="sidebar-item flex items-center px-6 py-3 text-sm hover:bg-smkp-light transition-all"><i class="ph-fill ph-chart-polar mr-3 text-lg item-icon"></i> <span class="hide-text whitespace-nowrap">Analisis Subjek</span></a></li>
+                <li class="section-label mt-4 mb-2 px-6"><span class="text-xs font-semibold text-blue-300 uppercase tracking-wider">Sistem</span></li>
+                <li><a href="#" onclick="switchView('admin', this)" class="sidebar-item flex items-center px-6 py-3 text-sm hover:bg-smkp-light transition-all"><i class="ph-fill ph-database mr-3 text-lg item-icon"></i> <span class="hide-text whitespace-nowrap">Pentadbiran</span></a></li>
+                <li><a href="#" onclick="switchView('tetapan', this)" class="sidebar-item flex items-center px-6 py-3 text-sm hover:bg-smkp-light transition-all"><i class="ph-fill ph-gear mr-3 text-lg item-icon"></i> <span class="hide-text whitespace-nowrap">Tetapan</span></a></li>
             </ul>
         </nav>
 
         <!-- Footer Sidebar -->
-        <div class="p-4 border-t border-blue-900 text-xs text-blue-300">
-            <p>Sistem GPMP</p>
-            <p class="mt-1">v1.0.0</p>
+        <div class="sidebar-footer p-4 border-t border-blue-900 text-xs text-blue-300 transition-all overflow-hidden">
+            <p class="whitespace-nowrap">Sistem GPMP</p>
+            <p class="mt-1 whitespace-nowrap">v1.0.0</p>
         </div>
     </aside>
 
     <!-- MAIN CONTENT AREA -->
-    <main class="flex-1 flex flex-col h-full overflow-hidden bg-bg relative">
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-bg relative w-full">
         
         <!-- Loading Overlay -->
         <div id="loadingOverlay" class="absolute inset-0 bg-white z-50 flex flex-col items-center justify-center" style="background-color: rgba(255,255,255,0.9);">
@@ -131,38 +165,44 @@
         </div>
 
         <!-- TOP HEADER -->
-        <header class="bg-white shadow-sm px-6 py-4 flex items-center justify-between z-10 flex-shrink-0">
-            <div>
-                <h2 class="text-2xl font-bold text-smkp-dark">DASHBOARD PRESTASI SPM</h2>
-                <p class="text-sm text-slate-500">Sistem Analitik Prestasi Murid</p>
+        <header class="bg-white shadow-sm px-4 md:px-6 py-4 flex items-center justify-between z-10 flex-shrink-0">
+            <div class="flex items-center">
+                <!-- Hamburger Button -->
+                <button onclick="toggleSidebar()" class="mr-3 md:mr-5 text-slate-500 hover:text-smkp-accent focus:outline-none p-1.5 rounded-md hover:bg-slate-100 transition-colors">
+                    <i class="ph-bold ph-list text-2xl"></i>
+                </button>
+                <div>
+                    <h2 class="text-lg md:text-2xl font-bold text-smkp-dark leading-tight">DASHBOARD PRESTASI SPM</h2>
+                    <p class="text-[10px] md:text-sm text-slate-500">Sistem Analitik Prestasi Murid</p>
+                </div>
             </div>
         </header>
 
         <!-- SCROLLABLE VIEWS CONTAINER -->
-        <div class="flex-1 overflow-y-auto p-6">
+        <div class="flex-1 overflow-y-auto p-4 md:p-6">
             
             <!-- VIEW 1: DASHBOARD UTAMA -->
-            <div id="view-dashboard" class="view-section active space-y-6">
+            <div id="view-dashboard" class="view-section active space-y-4 md:space-y-6">
                 
                 <!-- Filter / Carian Bar -->
-                <div id="filter-bar-container" class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                    <div class="flex flex-wrap items-center justify-between gap-4">
-                        <div class="flex flex-wrap items-center gap-6">
+                <div id="filter-bar-container" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5">
+                    <div class="flex flex-col md:flex-row flex-wrap items-start md:items-center justify-between gap-4">
+                        <div class="flex flex-col md:flex-row flex-wrap items-start md:items-center gap-4 md:gap-6 w-full md:w-auto">
                             <!-- Search Student -->
-                            <div class="relative">
+                            <div class="relative w-full md:w-auto">
                                 <label class="text-xs text-slate-500 block mb-1 font-semibold uppercase tracking-wide">Cari Nama Murid atau ID</label>
-                                <div class="flex">
-                                    <input type="text" id="searchInput" onkeypress="if(event.key === 'Enter') searchStudent()" placeholder="Cth: ANDREA / P001" class="border border-slate-300 rounded-l-md px-3 py-2 text-sm w-56 focus:outline-none focus:border-blue-500 font-medium">
+                                <div class="flex w-full">
+                                    <input type="text" id="searchInput" onkeypress="if(event.key === 'Enter') searchStudent()" placeholder="Cth: ANDREA / P001" class="border border-slate-300 rounded-l-md px-3 py-2 text-sm flex-1 md:w-56 focus:outline-none focus:border-blue-500 font-medium">
                                     <button onclick="resetSearch()" class="bg-slate-100 hover:bg-slate-200 border-y border-slate-300 text-slate-500 px-3 py-2 transition-colors" title="Kembali ke Purata Keseluruhan"><i class="ph-bold ph-x"></i></button>
                                     <button onclick="searchStudent()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-md transition-colors"><i class="ph-bold ph-magnifying-glass"></i></button>
                                 </div>
                             </div>
                             
                             <!-- Search Subject -->
-                            <div class="relative hidden md:block" id="dashboard-subject-filter-container">
+                            <div class="relative w-full md:w-auto" id="dashboard-subject-filter-container">
                                 <label class="text-xs text-slate-500 block mb-1 font-semibold uppercase tracking-wide">Tapis Mata Pelajaran</label>
                                 <div class="relative">
-                                    <button type="button" onclick="document.getElementById('subjectDropdown').classList.toggle('hidden')" class="border border-slate-300 rounded-md px-3 py-2 text-sm w-64 bg-white text-left flex justify-between items-center focus:outline-none focus:border-blue-500">
+                                    <button type="button" onclick="document.getElementById('subjectDropdown').classList.toggle('hidden')" class="border border-slate-300 rounded-md px-3 py-2 text-sm w-full md:w-64 bg-white text-left flex justify-between items-center focus:outline-none focus:border-blue-500">
                                         <span class="truncate text-slate-600 font-medium">Pilih Mata Pelajaran...</span>
                                         <i class="ph-bold ph-caret-down text-slate-400"></i>
                                     </button>
@@ -174,8 +214,8 @@
                         </div>
 
                         <!-- Image Download Button -->
-                        <div class="flex items-end h-full mt-2 sm:mt-0">
-                            <button onclick="downloadDashboardAsImage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-md text-sm font-medium flex items-center transition-colors shadow-sm whitespace-nowrap h-[42px]">
+                        <div class="flex items-end w-full md:w-auto mt-2 md:mt-0">
+                            <button onclick="downloadDashboardAsImage()" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 md:py-2 rounded-md text-sm font-medium flex items-center justify-center transition-colors shadow-sm whitespace-nowrap h-[42px]">
                                 <i class="ph-bold ph-image mr-2 text-lg"></i> Muat Turun Imej
                             </button>
                         </div>
@@ -189,17 +229,17 @@
                 </div>
 
                 <!-- Student Info Card -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-wrap items-center justify-between">
-                    <div class="flex items-center space-x-6 md:space-x-10 w-full overflow-x-auto pb-2 custom-scrollbar">
-                        <div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex flex-wrap items-center justify-between">
+                    <div class="flex items-start md:items-center space-x-6 md:space-x-10 w-full overflow-x-auto pb-2 custom-scrollbar">
+                        <div class="flex-shrink-0">
                             <p class="text-xs text-slate-500 font-semibold mb-1 uppercase tracking-wide">Nama Pelajar</p>
-                            <h3 class="text-xl font-bold text-slate-800 whitespace-nowrap" id="dash-student-name">-</h3>
+                            <h3 class="text-lg md:text-xl font-bold text-slate-800 whitespace-nowrap" id="dash-student-name">-</h3>
                         </div>
-                        <div class="border-l border-slate-200 pl-6 md:pl-8">
+                        <div class="border-l border-slate-200 pl-6 md:pl-8 flex-shrink-0">
                             <p class="text-xs text-slate-500 font-semibold mb-1 uppercase tracking-wide">Kelas</p>
-                            <h3 class="text-xl font-bold text-slate-800" id="dash-student-class">-</h3>
+                            <h3 class="text-lg md:text-xl font-bold text-slate-800" id="dash-student-class">-</h3>
                         </div>
-                        <div class="border-l border-slate-200 pl-6 md:pl-8">
+                        <div class="border-l border-slate-200 pl-6 md:pl-8 flex-shrink-0">
                             <p class="text-xs text-slate-500 font-semibold mb-2 uppercase tracking-wide">Mata Pelajaran Diambil</p>
                             <div class="flex space-x-2" id="dash-student-subjects">
                                 <!-- Dynamic subjects injected here -->
@@ -209,12 +249,12 @@
                 </div>
 
                 <!-- Charts Container (Dynamic Row) -->
-                <div id="charts-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div id="charts-container" class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                     <!-- Cards will be generated here based on DB -->
                 </div>
 
                 <!-- Analysis Container (Dynamic Row) -->
-                <div id="analysis-container" class="grid grid-cols-1 gap-6">
+                <div id="analysis-container" class="grid grid-cols-1 gap-4 md:gap-6">
                     <!-- Tables will be generated here based on DB -->
                 </div>
 
@@ -222,7 +262,7 @@
 
             <!-- VIEW 2: CARIAN MURID (TABLE) -->
             <div id="view-pelajar" class="view-section">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-4 border-slate-100 gap-4">
                         <h3 class="text-lg font-bold text-smkp-dark">Senarai Pelajar Berdaftar</h3>
                         
@@ -244,11 +284,11 @@
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-slate-50 text-slate-600 text-sm border-y border-slate-200">
-                                    <th class="p-3 font-semibold">ID Pelajar</th>
-                                    <th class="p-3 font-semibold">Nama Penuh</th>
-                                    <th class="p-3 font-semibold">No IC</th>
-                                    <th class="p-3 font-semibold">Kelas</th>
-                                    <th class="p-3 font-semibold">Tindakan</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">ID Pelajar</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">Nama Penuh</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">No IC</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">Kelas</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">Tindakan</th>
                                 </tr>
                             </thead>
                             <tbody id="table-pelajar-body" class="text-sm divide-y divide-slate-100">
@@ -261,26 +301,26 @@
 
             <!-- VIEW 3: ANALISIS SUBJEK -->
             <div id="view-analisis" class="view-section">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col h-full">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4 border-slate-100">
                         <h3 class="text-lg font-bold text-smkp-dark flex items-center"><i class="ph-fill ph-chart-polar mr-2 text-indigo-600"></i> Analisis Peperiksaan Subjek</h3>
                         
                         <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                            <div class="flex flex-col">
+                            <div class="flex flex-col flex-1 sm:flex-none">
                                 <label class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Tahun</label>
-                                <select id="filter-analisis-tahun" onchange="updateAnalisisSubjek()" class="border border-slate-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-medium min-w-[100px]">
+                                <select id="filter-analisis-tahun" onchange="updateAnalisisSubjek()" class="w-full border border-slate-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-medium min-w-[100px]">
                                     <!-- Options populated by JS -->
                                 </select>
                             </div>
-                            <div class="flex flex-col">
+                            <div class="flex flex-col flex-1 sm:flex-none">
                                 <label class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Mata Pelajaran</label>
-                                <select id="filter-analisis-subjek" onchange="updateAnalisisSubjek()" class="border border-slate-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-medium min-w-[200px]">
+                                <select id="filter-analisis-subjek" onchange="updateAnalisisSubjek()" class="w-full border border-slate-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-medium min-w-[200px]">
                                     <!-- Options populated by JS -->
                                 </select>
                             </div>
-                            <div class="flex flex-col">
+                            <div class="flex flex-col flex-1 sm:flex-none">
                                 <label class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Peperiksaan</label>
-                                <select id="filter-analisis-exam" onchange="updateAnalisisSubjek()" class="border border-slate-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-medium min-w-[150px]">
+                                <select id="filter-analisis-exam" onchange="updateAnalisisSubjek()" class="w-full border border-slate-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-medium min-w-[150px]">
                                     <!-- Options populated by JS -->
                                 </select>
                             </div>
@@ -288,12 +328,12 @@
                     </div>
 
                     <!-- Summary Stats -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="analisis-stats-container">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6" id="analisis-stats-container">
                         <!-- Stat Cards injected here -->
                     </div>
 
                     <!-- Visual Dashboard (Charts) -->
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6" id="analisis-charts-wrapper">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6" id="analisis-charts-wrapper">
                         <!-- Grade Distribution Chart -->
                         <div class="lg:col-span-2 bg-slate-50 border border-slate-100 rounded-lg p-4">
                             <h4 class="text-sm font-bold text-slate-700 mb-2 flex items-center"><i class="ph-fill ph-chart-bar mr-2 text-blue-500"></i> Taburan Gred Pencapaian</h4>
@@ -323,12 +363,12 @@
                             <table class="w-full text-left border-collapse relative">
                                 <thead class="sticky top-0 bg-white shadow-sm z-10">
                                     <tr class="text-slate-600 text-xs uppercase bg-slate-50 border-y border-slate-200">
-                                        <th class="p-3 font-semibold">ID Pelajar</th>
-                                        <th class="p-3 font-semibold">Nama Penuh</th>
-                                        <th class="p-3 font-semibold">Kelas</th>
-                                        <th class="p-3 font-semibold">Peperiksaan</th>
-                                        <th class="p-3 font-semibold text-center">Markah</th>
-                                        <th class="p-3 font-semibold text-center">Gred</th>
+                                        <th class="p-3 font-semibold whitespace-nowrap">ID Pelajar</th>
+                                        <th class="p-3 font-semibold whitespace-nowrap">Nama Penuh</th>
+                                        <th class="p-3 font-semibold whitespace-nowrap">Kelas</th>
+                                        <th class="p-3 font-semibold whitespace-nowrap">Peperiksaan</th>
+                                        <th class="p-3 font-semibold text-center whitespace-nowrap">Markah</th>
+                                        <th class="p-3 font-semibold text-center whitespace-nowrap">Gred</th>
                                     </tr>
                                 </thead>
                                 <tbody id="table-analisis-body" class="text-sm divide-y divide-slate-100">
@@ -342,9 +382,9 @@
 
             <!-- VIEW 4: PENTADBIRAN -->
             <div id="view-admin" class="view-section">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <!-- Daftar Pelajar -->
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6">
                         <h3 class="text-lg font-bold text-smkp-dark mb-4 flex items-center"><i class="ph-bold ph-user-plus mr-2"></i> Daftar Pelajar Baru</h3>
                         <form onsubmit="event.preventDefault(); alert('Modul simpanan belum diaktifkan (Demo)');" class="space-y-4">
                             <div>
@@ -372,7 +412,7 @@
                     </div>
 
                     <!-- Daftar Subjek -->
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6">
                         <h3 class="text-lg font-bold text-smkp-dark mb-4 flex items-center"><i class="ph-bold ph-books mr-2"></i> Pengurusan Subjek</h3>
                         <form onsubmit="event.preventDefault(); alert('Modul simpanan belum diaktifkan (Demo)');" class="space-y-4">
                             <div>
@@ -402,7 +442,7 @@
 
             <!-- VIEW 4: TETAPAN -->
             <div id="view-tetapan" class="view-section">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 max-w-2xl mx-auto">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 max-w-2xl mx-auto">
                     <h3 class="text-lg font-bold text-smkp-dark mb-6 border-b pb-2"><i class="ph-bold ph-shield-check mr-2"></i> Tetapan Keselamatan</h3>
                     
                     <div class="space-y-6">
@@ -413,16 +453,16 @@
                                 <input type="password" placeholder="Kata Laluan Baru" class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm outline-none">
                                 <input type="password" placeholder="Sahkan Kata Laluan Baru" class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm outline-none">
                             </div>
-                            <button class="mt-3 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">Kemaskini Kata Laluan</button>
+                            <button class="mt-3 w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">Kemaskini Kata Laluan</button>
                         </div>
                         
                         <hr class="border-slate-100">
                         
                         <div>
                             <h4 class="text-sm font-semibold text-slate-700 mb-3">Tetapan ID Sistem (Mock)</h4>
-                            <div class="flex items-center space-x-3">
-                                <input type="text" value="ADMIN_SMKP_01" class="border border-slate-300 rounded-md px-3 py-2 text-sm bg-slate-50 text-slate-500 w-64" readonly>
-                                <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">Jana ID Baru</button>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                <input type="text" value="ADMIN_SMKP_01" class="border border-slate-300 rounded-md px-3 py-2 text-sm bg-slate-50 text-slate-500 w-full sm:w-64" readonly>
+                                <button class="text-blue-600 hover:text-blue-800 text-sm font-medium self-start sm:self-auto">Jana ID Baru</button>
                             </div>
                         </div>
                     </div>
@@ -432,20 +472,20 @@
         </div> <!-- End Scrollable Container -->
 
         <!-- Bottom Footer Line -->
-        <footer class="bg-white border-t border-slate-200 px-6 py-2 text-xs text-slate-500 flex justify-between items-center z-10 flex-shrink-0">
-            <div class="flex items-center space-x-4">
+        <footer class="bg-white border-t border-slate-200 px-4 md:px-6 py-2 text-[10px] md:text-xs text-slate-500 flex flex-col md:flex-row justify-between items-center z-10 flex-shrink-0 gap-1 md:gap-0 text-center md:text-left">
+            <div class="flex items-center flex-wrap justify-center space-x-2 md:space-x-4">
                 <span class="flex items-center"><i class="ph-fill ph-users mr-1"></i> Sistem Analitik Prestasi Murid</span>
-                <span>|</span>
+                <span class="hidden md:inline">|</span>
                 <span>&copy; 2024 SMK (P) Jalan Ipoh. Hak Cipta Terpelihara.</span>
             </div>
-            <div class="flex items-center">
-                <i class="ph-fill ph-calendar-blank mr-1"></i> Kemas kini terakhir: <span id="currentDate"></span>
+            <div class="flex items-center mt-1 md:mt-0">
+                <i class="ph-fill ph-calendar-blank mr-1"></i> Kemas kini terakhir: <span id="currentDate" class="ml-1"></span>
             </div>
         </footer>
 
         <!-- Toast Notification -->
-        <div id="toast" class="absolute bottom-10 right-6 bg-slate-800 text-white px-4 py-3 rounded-md shadow-lg transform transition-all duration-300 translate-y-20 opacity-0 z-50 flex items-center pointer-events-none">
-            <div class="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center mr-3"><i class="ph-bold ph-info text-xl"></i></div>
+        <div id="toast" class="absolute bottom-10 right-4 md:right-6 bg-slate-800 text-white px-4 py-3 rounded-md shadow-lg transform transition-all duration-300 translate-y-20 opacity-0 z-50 flex items-center pointer-events-none max-w-[90vw]">
+            <div class="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center mr-3 flex-shrink-0"><i class="ph-bold ph-info text-xl"></i></div>
             <span id="toast-msg" class="text-sm font-medium">Mesej</span>
         </div>
 
@@ -459,6 +499,31 @@
         let chartAnalisisPF = null;
         let currentDashboardStudent = null; // null = overall
         let activeDashboardSubjects = []; // array of subject IDs ticked
+
+        // --- Sidebar Toggle Logic ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            
+            if (window.innerWidth < 768) {
+                // Mobile behavior
+                sidebar.classList.toggle('expanded');
+                overlay.classList.toggle('hidden');
+            } else {
+                // Desktop behavior
+                sidebar.classList.toggle('collapsed');
+            }
+        }
+
+        // Handle resize properly
+        window.addEventListener('resize', () => {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            if (window.innerWidth >= 768) {
+                sidebar.classList.remove('expanded');
+                overlay.classList.add('hidden');
+            }
+        });
 
         // --- View Switching Logic ---
         function switchView(viewId, element) {
@@ -477,6 +542,12 @@
             
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById('view-' + viewId).classList.add('active');
+
+            // Close mobile sidebar if open after clicking a link
+            if (window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.remove('expanded');
+                document.getElementById('mobile-overlay').classList.add('hidden');
+            }
         }
 
         // Set current date in footer
@@ -790,7 +861,7 @@
                             <span class="bg-indigo-50 border border-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-1 rounded-md">${p.KELAS}</span>
                         </td>
                         <td class="p-3 border-y border-slate-100">
-                            <button onclick="document.getElementById('searchInput').value='${idStr}'; searchStudent();" class="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 hover:bg-blue-50 px-3 py-1.5 rounded transition-colors bg-white shadow-sm flex items-center">
+                            <button onclick="document.getElementById('searchInput').value='${idStr}'; searchStudent();" class="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 hover:bg-blue-50 px-3 py-1.5 rounded transition-colors bg-white shadow-sm flex items-center whitespace-nowrap">
                                 <i class="ph-bold ph-chart-bar mr-1"></i> Lihat Dashboard
                             </button>
                         </td>
@@ -862,65 +933,65 @@
         });
 
         // --- NEW IMAGE DOWNLOAD LOGIC ---
-function downloadDashboardAsImage() {
-    showToast("Menjana imej, sila tunggu sebentar...");
-    const element = document.getElementById('view-dashboard');
-    const header = document.getElementById('capture-header');
-    const filterBar = document.getElementById('filter-bar-container');
+        function downloadDashboardAsImage() {
+            showToast("Menjana imej, sila tunggu sebentar...");
+            const element = document.getElementById('view-dashboard');
+            const header = document.getElementById('capture-header');
+            const filterBar = document.getElementById('filter-bar-container');
 
-    if (header) header.classList.remove('hidden');
-    if (filterBar) filterBar.classList.add('hidden');
+            if (header) header.classList.remove('hidden');
+            if (filterBar) filterBar.classList.add('hidden');
 
-    const scrollContainer = document.querySelector('.flex-1.overflow-y-auto');
-    if (scrollContainer) scrollContainer.scrollTop = 0;
+            const scrollContainer = document.querySelector('.flex-1.overflow-y-auto');
+            if (scrollContainer) scrollContainer.scrollTop = 0;
 
-    // ✅ KUNCI UTAMA: Matikan animation CSS semasa tangkap
-    const styleOverride = document.createElement('style');
-    styleOverride.id = 'capture-style-override';
-    styleOverride.innerHTML = `
-        * { 
-            animation: none !important; 
-            transition: none !important; 
-            opacity: 1 !important; 
+            // Matikan animation CSS semasa tangkap
+            const styleOverride = document.createElement('style');
+            styleOverride.id = 'capture-style-override';
+            styleOverride.innerHTML = `
+                * { 
+                    animation: none !important; 
+                    transition: none !important; 
+                    opacity: 1 !important; 
+                }
+            `;
+            document.head.appendChild(styleOverride);
+
+            setTimeout(() => {
+                html2canvas(element, {
+                    scale: 2,
+                    backgroundColor: '#f3f4f6',
+                    useCORS: true,
+                    logging: false,
+                    scrollX: 0,
+                    scrollY: 0,
+                    windowWidth: element.scrollWidth,
+                    windowHeight: element.scrollHeight,
+                }).then(canvas => {
+                    // Buang style override, pulihkan UI
+                    const styleEl = document.getElementById('capture-style-override');
+                    if (styleEl) styleEl.remove();
+                    if (header) header.classList.add('hidden');
+                    if (filterBar) filterBar.classList.remove('hidden');
+
+                    const imgData = canvas.toDataURL('image/png', 1.0);
+                    const link = document.createElement('a');
+                    let studentName = currentDashboardStudent
+                        ? currentDashboardStudent['NAMA PENUH']
+                        : "PURATA_KESELURUHAN";
+                    link.download = `Prestasi_SPM_${studentName.replace(/[^a-z0-9]/gi, '_').toUpperCase()}.png`;
+                    link.href = imgData;
+                    link.click();
+                    showToast("Imej berjaya dimuat turun!");
+                }).catch(err => {
+                    const styleEl = document.getElementById('capture-style-override');
+                    if (styleEl) styleEl.remove();
+                    if (header) header.classList.add('hidden');
+                    if (filterBar) filterBar.classList.remove('hidden');
+                    showToast("Ralat! Gagal memuat turun imej.");
+                });
+            }, 800);
         }
-    `;
-    document.head.appendChild(styleOverride);
-
-    setTimeout(() => {
-        html2canvas(element, {
-            scale: 2,
-            backgroundColor: '#f3f4f6',
-            useCORS: true,
-            logging: false,
-            scrollX: 0,
-            scrollY: 0,
-            windowWidth: element.scrollWidth,
-            windowHeight: element.scrollHeight,
-        }).then(canvas => {
-            // Buang style override, pulihkan UI
-            const styleEl = document.getElementById('capture-style-override');
-            if (styleEl) styleEl.remove();
-            if (header) header.classList.add('hidden');
-            if (filterBar) filterBar.classList.remove('hidden');
-
-            const imgData = canvas.toDataURL('image/png', 1.0);
-            const link = document.createElement('a');
-            let studentName = currentDashboardStudent
-                ? currentDashboardStudent['NAMA PENUH']
-                : "PURATA_KESELURUHAN";
-            link.download = `Prestasi_SPM_${studentName.replace(/[^a-z0-9]/gi, '_').toUpperCase()}.png`;
-            link.href = imgData;
-            link.click();
-            showToast("Imej berjaya dimuat turun!");
-        }).catch(err => {
-            const styleEl = document.getElementById('capture-style-override');
-            if (styleEl) styleEl.remove();
-            if (header) header.classList.add('hidden');
-            if (filterBar) filterBar.classList.remove('hidden');
-            showToast("Ralat! Gagal memuat turun imej.");
-        });
-    }, 800);
-}
 
         // Helper to add opacity to Hex
         function hexToRgba(hex, alpha) {
@@ -996,7 +1067,7 @@ function downloadDashboardAsImage() {
                 const bgLight = hexToRgba(hexColor, 0.1);
 
                 const cardHtml = `
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col h-full hover:shadow-md transition-shadow">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex flex-col h-full hover:shadow-md transition-shadow">
                         <div class="flex flex-col sm:flex-row justify-between items-start mb-6 gap-4">
                             <div class="flex items-center min-w-[150px]">
                                 <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3 flex-shrink-0" style="background-color: ${bgLight}; color: ${hexColor};">
@@ -1068,7 +1139,7 @@ function downloadDashboardAsImage() {
                 const subMarks = appData.markah.filter(m => m.ID_SUBJEK === subId);
                 
                 tableRows += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">`;
-                tableRows += `<td class="py-3 px-4 font-bold border-r border-slate-200 flex items-center" style="color: ${sub.WARNA_HEX}">
+                tableRows += `<td class="py-3 px-4 font-bold border-r border-slate-200 flex items-center whitespace-nowrap" style="color: ${sub.WARNA_HEX}">
                     <span class="w-2.5 h-2.5 rounded-full mr-3" style="background-color:${sub.WARNA_HEX}"></span> ${sub['NAMA MATA PELAJARAN']}
                 </td>`;
                 
@@ -1092,8 +1163,8 @@ function downloadDashboardAsImage() {
             analysisContainer.innerHTML = `
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col w-full">
                     <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-indigo-50">
-                        <h3 class="font-bold text-smkp-dark flex items-center">
-                            <div class="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 mr-3"><i class="ph-fill ph-chart-line-up text-lg"></i></div>
+                        <h3 class="font-bold text-smkp-dark flex items-center text-sm md:text-base">
+                            <div class="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 mr-3 flex-shrink-0"><i class="ph-fill ph-chart-line-up text-lg"></i></div>
                             REKOD PURATA KESELURUHAN KELAS
                         </h3>
                     </div>
@@ -1131,7 +1202,7 @@ function downloadDashboardAsImage() {
                 const sub = appData.subjek.find(s => s.ID_SUBJEK === subId) || { 'NAMA MATA PELAJARAN': subId, WARNA_HEX: '#3b82f6' };
                 const bgColor = hexToRgba(sub.WARNA_HEX, 0.1);
                 const borderColor = hexToRgba(sub.WARNA_HEX, 0.2);
-                subjectsDiv.innerHTML += `<span class="px-3 py-1 text-xs font-bold rounded-md flex items-center border" style="background-color: ${bgColor}; color: ${sub.WARNA_HEX}; border-color: ${borderColor};"><i class="ph-fill ph-bookmark-simple mr-1.5"></i> ${sub['NAMA MATA PELAJARAN']}</span>`;
+                subjectsDiv.innerHTML += `<span class="px-3 py-1 text-xs font-bold rounded-md flex items-center border whitespace-nowrap" style="background-color: ${bgColor}; color: ${sub.WARNA_HEX}; border-color: ${borderColor};"><i class="ph-fill ph-bookmark-simple mr-1.5"></i> ${sub['NAMA MATA PELAJARAN']}</span>`;
             });
 
             // 3. Prepare Chart Containers
@@ -1178,7 +1249,7 @@ function downloadDashboardAsImage() {
                 const bgLight = hexToRgba(hexColor, 0.1);
 
                 const cardHtml = `
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col h-full hover:shadow-md transition-shadow">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex flex-col h-full hover:shadow-md transition-shadow">
                         <div class="flex flex-col sm:flex-row justify-between items-start mb-6 gap-4">
                             <div class="flex items-center min-w-[150px]">
                                 <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3 flex-shrink-0" style="background-color: ${bgLight}; color: ${hexColor};">
@@ -1261,7 +1332,7 @@ function downloadDashboardAsImage() {
                 const subMarks = studentMarks.filter(m => m.ID_SUBJEK === subId);
                 
                 tableRows += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">`;
-                tableRows += `<td class="py-3 px-4 font-bold border-r border-slate-200 flex items-center" style="color: ${sub.WARNA_HEX}">
+                tableRows += `<td class="py-3 px-4 font-bold border-r border-slate-200 flex items-center whitespace-nowrap" style="color: ${sub.WARNA_HEX}">
                     <span class="w-2.5 h-2.5 rounded-full mr-3" style="background-color:${sub.WARNA_HEX}"></span> ${sub['NAMA MATA PELAJARAN']}
                 </td>`;
                 
@@ -1282,8 +1353,8 @@ function downloadDashboardAsImage() {
             analysisContainer.innerHTML = `
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col w-full">
                     <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-indigo-50">
-                        <h3 class="font-bold text-smkp-dark flex items-center">
-                            <div class="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 mr-3"><i class="ph-fill ph-table text-lg"></i></div>
+                        <h3 class="font-bold text-smkp-dark flex items-center text-sm md:text-base">
+                            <div class="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 mr-3 flex-shrink-0"><i class="ph-fill ph-table text-lg"></i></div>
                             REKOD PRESTASI KESELURUHAN & GRED
                         </h3>
                     </div>
